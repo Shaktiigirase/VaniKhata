@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="VaniKhata">
+<meta name="theme-color" content="#1f2a5a">
+<title>VaniKhata</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#1f2a5a;--paper:#f4f7fc;--line:#cfd9ec;--sale:#17724a;--exp:#b3261e;--text:#161a2b;--mute:#5a6483}
+*{box-sizing:border-box}
+body{margin:0;font-family:Mukta,-apple-system,"Helvetica Neue",sans-serif;color:var(--text);background:var(--paper) repeating-linear-gradient(transparent 0 31px,var(--line) 31px 32px);min-height:100vh}
+main{max-width:520px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom)) 44px;position:relative}
+main::before{content:"";position:absolute;left:30px;top:0;bottom:0;width:2px;background:#e3a3a0}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0}
+h1{font-size:30px;font-weight:800;margin:0;color:var(--ink);line-height:1}
+select,input,button{font:inherit}
+select{border:1.5px solid var(--ink);background:#fff;border-radius:10px;padding:8px 10px;color:var(--ink);font-weight:600}
+.tot{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.tot div{background:#fff;border:1.5px solid var(--ink);border-radius:12px;padding:8px 10px}
+.tot small{display:block;color:var(--mute);font-size:14px}
+.tot b{font-size:22px}
+#in b{color:var(--sale)}#out b{color:var(--exp)}
+.mic{display:flex;flex-direction:column;align-items:center;gap:8px;margin:20px 0 12px}
+#mic{width:112px;height:112px;border-radius:50%;border:0;background:var(--ink);color:#fff;font-size:44px;box-shadow:0 0 0 8px rgba(31,42,90,.15)}
+#mic.on{background:var(--exp);box-shadow:0 0 0 12px rgba(179,38,30,.2)}
+#st{min-height:26px;text-align:center;color:var(--mute);margin:0}
+.row{display:flex;gap:8px}
+input{flex:1;min-width:0;border:1.5px solid var(--ink);border-radius:10px;padding:10px 12px;background:#fff}
+.btn{border:0;border-radius:10px;padding:10px 16px;background:var(--ink);color:#fff;font-weight:600}
+.btn.alt{background:#fff;color:var(--ink);border:1.5px solid var(--ink)}
+#cf{display:none;background:#fff;border:2px solid var(--ink);border-radius:14px;padding:14px;margin:14px 0;gap:10px;flex-direction:column}
+#cf.show{display:flex}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.seg button{border:1.5px solid var(--ink);background:#fff;border-radius:10px;padding:8px;font-weight:600;color:var(--ink)}
+.seg button.a{background:var(--ink);color:#fff}
+.tabs{display:flex;gap:8px;margin:20px 0 8px}
+.tabs button{flex:1}
+ul{list-style:none;margin:0;padding:0}
+li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
+li span{flex:1}li small{color:var(--mute);display:block}
+.s{color:var(--sale);font-weight:800}.e{color:var(--exp);font-weight:800}
+li button{border:0;background:none;color:var(--mute);font-size:20px}
+.wk{display:flex;align-items:flex-end;gap:6px;height:130px;margin:8px 0}
+.wk div{flex:1;text-align:center;font-size:13px;color:var(--mute)}
+.wk i{display:inline-block;width:42%;border-radius:4px 4px 0 0;min-height:2px}
+.empty{color:var(--mute);padding:12px 0}
+</style>
+</head>
+<body>
+<main>
+<header><h1>VaniKhata</h1>
+<select id="lang" aria-label="Language"><option value="hi-IN">हिन्दी</option><option value="mr-IN">मराठी</option><option value="en-IN">English</option></select></header>
+<div class="tot"><div id="in"><small>Sales today</small><b>₹0</b></div><div id="out"><small>Expenses</small><b>₹0</b></div><div id="pf"><small>Profit</small><b>₹0</b></div></div>
+
+<div class="mic"><button id="mic" aria-label="Speak an entry">🎙</button><p id="st">Tap and say, for example: “chai pachaas rupaye”</p></div>
+<div class="row"><input id="tx" placeholder="Or type here" autocomplete="off"><button class="btn" id="add">Add</button></div>
+
+<section id="cf" aria-live="polite">
+<small id="heard" style="color:var(--mute)"></small>
+<div class="seg"><button data-t="sale">Sale</button><button data-t="expense">Expense</button></div>
+<input id="item" placeholder="Item">
+<input id="amt" type="number" inputmode="decimal" placeholder="Amount (₹)">
+<div class="row"><button class="btn" id="save" style="flex:1">Save entry</button><button class="btn alt" id="no">Discard</button></div>
+</section>
+
+<div class="tabs"><button class="btn" id="tt">Today</button><button class="btn alt" id="tw">This week</button></div>
+<div id="view"></div>
+<div class="row" style="margin-top:16px"><button class="btn alt" id="csv" style="flex:1">Export CSV</button></div>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+const KEY='vanikhata.v1';
+const load=()=>{try{return JSON.parse(localStorage.getItem(KEY))||[]}catch(e){return[]}};
+const store=d=>{try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){$('#st').textContent='Could not save on this browser (private mode?).'}};
+let data=load(), cur=null, tab='today';
+
+/* ---------- number words (Hindi / Marathi, Roman + Devanagari) ---------- */
+const NW={};
+[[1,'ek,एक'],[2,'do,दो,don,दोन'],[3,'teen,तीन,tin'],[4,'char,चार'],[5,'paanch,panch,paach,पांच,पाच'],[6,'chhe,chah,saha,छह,छः,सहा'],[7,'saat,सात'],[8,'aath,आठ'],[9,'nau,नौ,नऊ'],[10,'das,दस,daha,दहा'],[12,'barah,bara,बारह,बारा'],[15,'pandrah,pandhra,पंद्रह,पंधरा'],[20,'bees,vis,बीस,वीस'],[25,'pachchis,pachis,पच्चीस,पंचवीस'],[30,'tees,tis,तीस'],[40,'chalis,चालीस,चाळीस'],[50,'pachaas,pachas,pannas,पचास,पन्नास'],[60,'saath,sath,साठ'],[70,'sattar,सत्तर'],[80,'assi,अस्सी,ऐंशी'],[90,'nabbe,नब्बे,नव्वद']]
+ .forEach(([v,w])=>w.split(',').forEach(x=>NW[x]=['u',v]));
+[[1.5,'dedh,डेढ़,डेढ,दीड'],[2.5,'dhai,ढाई,अडीच,adich'],[1.25,'sawa,सवा,सव्वा']].forEach(([v,w])=>w.split(',').forEach(x=>NW[x]=['f',v]));
+'sau,सौ,शे,शंभर,shambhar'.split(',').forEach(x=>NW[x]=['s',100]);
+'hazaar,hazar,हज़ार,हजार'.split(',').forEach(x=>NW[x]=['h',1000]);
+const set=s=>new Set(s.split(','));
+const EXP=set('kharcha,kharch,kharach,kharedi,kharid,kharida,expense,spent,bought,paid,diya,खर्च,खर्चा,खरेदी,खरीद,खरीदा,खरीदी,दिया,दिले');
+const SALE=set('becha,bechi,bikri,vikri,sale,sold,mila,received,income,aamdani,बेचा,बिक्री,विक्री,विकले,मिला,मिळाले,आमदनी');
+const STOP=set('rupaye,rupaiye,rupees,rupee,rupaya,rs,rupay,रुपये,रुपया,रुपए,ka,ke,ki,का,के,की,चा,ची,चे,me,mein,में,मध्ये,aaj,आज,को,ko,for,of,the,a');
+
+function norm(t){return t.toLowerCase().replace(/[०-९]/g,d=>'०१२३४५६७८९'.indexOf(d)).replace(/(\d),(?=\d)/g,'$1').replace(/[₹,।!?"“”]/g,' ').replace(/\s+/g,' ').trim()}
+function evalRun(r){let tot=0,c=0;for(const [k,v] of r){if(k==='u')c+=v;else if(k==='f')c=v;else if(k==='s')c=(c||1)*100;else{tot+=(c||1)*1000;c=0}}return tot+c}
+function parse(text){
+  const tk=norm(text).split(' ').filter(Boolean);
+  let type=null,amount=null;
+  tk.forEach(t=>{if(EXP.has(t))type='expense';else if(SALE.has(t)&&type!=='expense')type='sale'});
+  const dig=tk.find(t=>/^\d+(\.\d+)?$/.test(t));
+  const used=new Set();
+  if(dig){amount=parseFloat(dig);used.add(tk.indexOf(dig))}
+  else{
+    let best=null,run=[],idx=[];
+    const flush=()=>{if(run.length&&(!best||run.length>=best.r.length))best={r:run,i:idx};run=[];idx=[]};
+    tk.forEach((t,i)=>{if(NW[t]){run.push(NW[t]);idx.push(i)}else flush()});flush();
+    if(best){amount=evalRun(best.r);best.i.forEach(i=>used.add(i))}
+  }
+  const item=tk.filter((t,i)=>!used.has(i)&&!EXP.has(t)&&!SALE.has(t)&&!STOP.has(t)).join(' ');
+  return{type:type||'sale',item,amount};
+}
+
+/* ---------- confirm card ---------- */
+function showConfirm(text){
+  const p=parse(text);cur=p;
+  $('#heard').textContent='Heard: '+text;
+  $('#item').value=p.item;$('#amt').value=p.amount??'';
+  setType(p.type);$('#cf').classList.add('show');
+  if(p.amount==null)$('#st').textContent='Amount not found. Please enter it below.';
+  $('#cf').scrollIntoView({behavior:'smooth',block:'center'});
+}
+function setType(t){cur.type=t;document.querySelectorAll('.seg button').forEach(b=>b.classList.toggle('a',b.dataset.t===t))}
+document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>setType(b.dataset.t));
+$('#no').onclick=()=>{$('#cf').classList.remove('show');$('#st').textContent=''};
+$('#save').onclick=()=>{
+  const a=parseFloat($('#amt').value);
+  if(!(a>0)){$('#st').textContent='Enter an amount greater than 0.';return}
+  const item=$('#item').value.trim()||(cur.type==='sale'?'Sale':'Expense');
+  data.push({id:Date.now(),t:Date.now(),type:cur.type,item,amt:a});store(data);
+  $('#cf').classList.remove('show');$('#tx').value='';$('#st').textContent='Saved.';render();
+};
+$('#add').onclick=()=>{const v=$('#tx').value.trim();if(v)showConfirm(v)};
+$('#tx').addEventListener('keydown',e=>{if(e.key==='Enter')$('#add').click()});
+
+/* ---------- speech ---------- */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let rec=null;
+$('#lang').value=localStorage.getItem('vk.lang')||'hi-IN';
+$('#lang').onchange=()=>{try{localStorage.setItem('vk.lang',$('#lang').value)}catch(e){}};
+$('#mic').onclick=()=>{
+  if(!SR){$('#st').textContent='Voice is not supported here. Type, or use the mic on your keyboard.';return}
+  if(rec){rec.stop();return}
+  rec=new SR();rec.lang=$('#lang').value;rec.interimResults=false;rec.maxAlternatives=1;
+  rec.onstart=()=>{$('#mic').classList.add('on');$('#st').textContent='Listening…'};
+  rec.onresult=e=>{const t=e.results[0][0].transcript;$('#tx').value=t;showConfirm(t)};
+  rec.onerror=e=>{
+    const m={'not-allowed':'Microphone is blocked. Allow it in the browser settings.','service-not-allowed':'Turn on Dictation: Settings > General > Keyboard > Enable Dictation.','language-not-supported':'This browser cannot recognise that language. Try Hindi, or use the keyboard mic.','no-speech':'Did not hear anything. Tap and try again.','network':'No internet connection. Voice needs internet.'};
+    $('#st').textContent=m[e.error]||'Voice error: '+e.error;
+  };
+  rec.onend=()=>{rec=null;$('#mic').classList.remove('on');if($('#st').textContent==='Listening…')$('#st').textContent=''};
+  try{rec.start()}catch(e){rec=null}
+};
+
+/* ---------- summaries ---------- */
+const dkey=t=>{const d=new Date(t);return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()};
+const inr=n=>'₹'+Math.round(n*100)/100;
+const sum=(l,t)=>l.filter(x=>x.type===t).reduce((a,x)=>a+x.amt,0);
+function render(){
+  const today=data.filter(x=>dkey(x.t)===dkey(Date.now()));
+  const i=sum(today,'sale'),o=sum(today,'expense');
+  $('#in b').textContent=inr(i);$('#out b').textContent=inr(o);$('#pf b').textContent=inr(i-o);
+  $('#tt').className='btn'+(tab==='today'?'':' alt');$('#tw').className='btn'+(tab==='week'?'':' alt');
+  const v=$('#view');
+  if(tab==='today'){
+    v.innerHTML=today.length?'<ul>'+today.slice().reverse().map(x=>`<li><span>${esc(x.item)}<small>${new Date(x.t).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</small></span><b class="${x.type==='sale'?'s':'e'}">${x.type==='sale'?'+':'−'}${inr(x.amt)}</b><button data-d="${x.id}" aria-label="Delete">✕</button></li>`).join('')+'</ul>':'<p class="empty">No entries today. Tap the mic to add one.</p>';
+    v.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{data=data.filter(x=>x.id!=b.dataset.d);store(data);render()});
+  }else{
+    const days=[];for(let k=6;k>=0;k--){const d=new Date();d.setDate(d.getDate()-k);const l=data.filter(x=>dkey(x.t)===dkey(d));days.push({n:d.toLocaleDateString([], {weekday:'short'}),s:sum(l,'sale'),e:sum(l,'expense')})}
+    const mx=Math.max(1,...days.map(d=>Math.max(d.s,d.e)));
+    const ws=days.reduce((a,d)=>a+d.s,0),we=days.reduce((a,d)=>a+d.e,0);
+    v.innerHTML=`<p><b>Last 7 days:</b> sales ${inr(ws)}, expenses ${inr(we)}, profit <b class="${ws>=we?'s':'e'}">${inr(ws-we)}</b></p><div class="wk">`+days.map(d=>`<div><i style="height:${d.s/mx*100}px;background:var(--sale)"></i><i style="height:${d.e/mx*100}px;background:var(--exp)"></i><br>${d.n}</div>`).join('')+'</div><small style="color:var(--mute)">Green: sales. Red: expenses.</small>';
+  }
+}
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+$('#tt').onclick=()=>{tab='today';render()};$('#tw').onclick=()=>{tab='week';render()};
+$('#csv').onclick=()=>{
+  if(!data.length){$('#st').textContent='Nothing to export yet.';return}
+  const q=s=>'"'+String(s).replace(/"/g,'""')+'"';
+  const rows=['Date,Time,Type,Item,Amount'].concat(data.map(x=>{const d=new Date(x.t);return [d.toLocaleDateString(),d.toLocaleTimeString(),x.type,q(x.item),x.amt].join(',')}));
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv'}));a.download='vanikhata.csv';document.body.appendChild(a);a.click();a.remove();
+};
+render();
+</script>
+</body>
+</html>
